@@ -55,14 +55,14 @@ button.danger{color:var(--warn)}
 button:disabled{opacity:.45}
 button:active{opacity:.7}
 input,textarea,select{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);
-  border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:100%;min-height:40px}
+  border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:100%;min-height:42px}
 textarea{min-height:120px;resize:vertical}
 label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .grid2>*,.grid3>*{min-width:0}
 /* iOS Safari: date 입력은 고유 최소 너비가 있어 칸을 넘친다 */
-input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;text-align:left}
+input[type=date]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;height:42px;text-align:left}
 input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:var(--track);border-radius:11px;padding:3px}
 .seg button{border:0;background:transparent;min-height:36px;border-radius:8px;color:var(--mute);padding:4px}
@@ -566,8 +566,8 @@ V.settings = () => {
   if (r) for (let d = r.start; d <= r.end; d = addDays(d, 1)) { total += tgt(d); days++; }
   return `<h1>설정</h1>
   <div class="card"><h2>계획</h2>
-    <div class="grid2"><div><label>시작일</label><input type="date" id="stStart" value="${esc(st.start)}"></div>
-    <div><label>목표일</label><input type="date" id="stTarget" value="${esc(st.target)}"></div>
+    <div class="grid2"><div style="grid-column:span 2"><label>시작일</label><input type="date" id="stStart" value="${esc(st.start)}"></div>
+    <div style="grid-column:span 2"><label>목표일</label><input type="date" id="stTarget" value="${esc(st.target)}"></div>
     <div><label>평일 목표 (시간)</label><input type="number" id="stWd" step="0.5" min="0" inputmode="decimal" value="${st.weekday}"></div>
     <div><label>주말·휴일 목표 (시간)</label><input type="number" id="stWe" step="0.5" min="0" inputmode="decimal" value="${st.weekend}"></div></div>
     <label>휴일·연차 (한 줄에 하나, YYYY-MM-DD 메모)</label>
