@@ -60,6 +60,10 @@ textarea{min-height:120px;resize:vertical}
 label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.grid2>*,.grid3>*{min-width:0}
+/* iOS Safari: date 입력은 고유 최소 너비가 있어 칸을 넘친다 */
+input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;text-align:left}
+input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:var(--track);border-radius:11px;padding:3px}
 .seg button{border:0;background:transparent;min-height:36px;border-radius:8px;color:var(--mute);padding:4px}
 .seg button.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.1)}
