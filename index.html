@@ -17,11 +17,13 @@
 :root{
   --bg:#f6f5f2;--card:#fff;--ink:#1c1c1e;--mute:#6e6e73;--line:#e3e1dc;
   --acc:#2f6f5e;--acc-ink:#fff;--acc-soft:#dcebe5;--warn:#b5542d;--track:#ecebe7;
+  --k-read:#2a78d6;--k-write:#eb6834;--k-note:#1baf7a;--k-none:#b9b7b1;
   --r:14px;
 }
 @media (prefers-color-scheme: dark){
   :root{--bg:#111213;--card:#1c1d1f;--ink:#f2f2f2;--mute:#9a9a9f;--line:#2c2d30;
-    --acc:#6cc3a6;--acc-ink:#0d1f19;--acc-soft:#1f3a32;--warn:#e88a63;--track:#2a2b2e}
+    --acc:#6cc3a6;--acc-ink:#0d1f19;--acc-soft:#1f3a32;--warn:#e88a63;--track:#2a2b2e;
+    --k-read:#3987e5;--k-write:#d95926;--k-note:#199e70;--k-none:#55544f}
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink)}
@@ -31,8 +33,9 @@ main{max-width:560px;margin:0 auto;
   padding:calc(env(safe-area-inset-top,0px) + 12px) max(16px,env(safe-area-inset-right,0px))
           calc(env(safe-area-inset-bottom,0px) + 84px) max(16px,env(safe-area-inset-left,0px))}
 h1{font-size:22px;margin:4px 0 12px;letter-spacing:-.01em}
-h2{font-size:13px;font-weight:600;color:var(--mute);margin:0 0 8px;text-transform:none}
+h2{font-size:13px;font-weight:600;color:var(--mute);margin:0 0 8px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.card.hi{border-color:var(--k-write);box-shadow:0 0 0 1px var(--k-write)}
 .row{display:flex;align-items:center;gap:8px}
 .between{justify-content:space-between}
 .wrap{flex-wrap:wrap}
@@ -41,13 +44,15 @@ h2{font-size:13px;font-weight:600;color:var(--mute);margin:0 0 8px;text-transfor
 .big{font-size:30px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .num{font-variant-numeric:tabular-nums}
 .pos{color:var(--acc)} .neg{color:var(--warn)}
-.bar{height:8px;background:var(--track);border-radius:99px;overflow:hidden;margin:8px 0 4px}
-.bar>i{display:block;height:100%;background:var(--acc);border-radius:99px}
+.bar{height:8px;background:var(--track);border-radius:99px;overflow:hidden;margin:8px 0 4px;position:relative}
+.bar>i{display:block;height:100%;background:var(--acc);border-radius:99px;position:absolute;left:0;top:0}
+.bar>i.soft{background:color-mix(in srgb,var(--acc) 35%,var(--track))}
 button,.btn{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);
   border-radius:10px;padding:9px 12px;cursor:pointer;min-height:40px}
 button.pri{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:600}
 button.ghost{background:transparent;border-color:transparent;color:var(--mute);padding:6px 8px;min-height:32px}
 button.danger{color:var(--warn)}
+button:disabled{opacity:.45}
 button:active{opacity:.7}
 input,textarea,select{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);
   border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:100%;min-height:40px}
@@ -55,26 +60,49 @@ textarea{min-height:120px;resize:vertical}
 label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.timer{font-size:40px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;margin:4px 0 10px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:var(--track);border-radius:11px;padding:3px}
+.seg button{border:0;background:transparent;min-height:36px;border-radius:8px;color:var(--mute);padding:4px}
+.seg button.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:1px;flex:none}
+.timer{font-size:40px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;margin:6px 0 10px}
 .timerbtn{width:100%;min-height:52px;font-size:17px}
+.topic{display:flex;align-items:center;justify-content:center;gap:4px;font-size:13px;color:var(--mute)}
 .week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;margin-top:10px}
 .wd{text-align:center;font-size:12px;color:var(--mute)}
 .wd .col{height:70px;background:var(--track);border-radius:8px;position:relative;overflow:hidden;margin-bottom:4px}
 .wd .col>i{position:absolute;left:0;right:0;bottom:0;background:var(--acc)}
 .wd.today{color:var(--ink);font-weight:700}
-.wd.off .col{outline:1px dashed var(--line)}
+.stack{display:flex;gap:2px;height:12px;border-radius:99px;overflow:hidden;background:var(--track);margin:10px 0 8px}
+.stack>i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;align-items:center}
+.warnbox{color:var(--warn);font-size:13px;margin-top:8px;display:flex;gap:6px}
 .stat{display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid var(--line)}
 .stat:first-of-type{border-top:0}
 .list .it{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
 .list .it:first-child{border-top:0}
-.list .it .grow{flex:1;min-width:0;overflow-wrap:anywhere}
+.grow{flex:1;min-width:0;overflow-wrap:anywhere}
 .day{font-weight:600;margin:14px 0 6px;display:flex;justify-content:space-between}
-.chk{width:24px;height:24px;border-radius:7px;border:2px solid var(--line);flex:none;display:grid;place-items:center}
-.chk.on{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
-.done .grow{color:var(--mute);text-decoration:line-through}
+.lv{flex:none;min-width:54px;text-align:center;font-size:12px;border-radius:99px;padding:3px 8px;border:1px solid var(--line);color:var(--mute)}
+.lv1{background:var(--track);color:var(--ink);border-color:transparent}
+.lv2{background:var(--acc-soft);color:var(--ink);border-color:transparent}
+.lv3{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:600}
+.pt{font-size:13px;color:var(--mute);margin-top:2px}
 .grp-h{display:flex;align-items:center;gap:8px;cursor:pointer}
-.grp-h .grow{flex:1;font-weight:600}
+.grp-h .grow{font-weight:600}
 .banner{background:var(--acc-soft);border-radius:var(--r);padding:12px 14px;margin-bottom:12px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.heat{display:grid;grid-template-rows:14px repeat(7,14px);grid-auto-flow:column;grid-auto-columns:14px;gap:3px;width:max-content}
+.heat>i{border-radius:3px;background:var(--track);display:block}
+.heat>i.l1{background:color-mix(in srgb,var(--acc) 35%,var(--track))}
+.heat>i.l2{background:color-mix(in srgb,var(--acc) 65%,var(--track))}
+.heat>i.l3{background:var(--acc)}
+.heat>i.fut{background:transparent;box-shadow:inset 0 0 0 1px var(--line)}
+.heat>i.none{visibility:hidden}
+.heat>i.now{box-shadow:inset 0 0 0 2px var(--ink)}
+.heat>b{font-size:10px;font-weight:400;color:var(--mute);white-space:nowrap;line-height:14px}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{font-size:10px;fill:var(--mute)}
+.tip{min-height:20px;font-size:13px;margin-top:6px}
 nav{position:fixed;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--card) 92%,transparent);
   -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-top:1px solid var(--line);
   display:grid;grid-template-columns:repeat(4,1fr);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
@@ -84,7 +112,7 @@ nav button svg{width:22px;height:22px}
 nav button.on{color:var(--acc);font-weight:600}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 72px);
   background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:99px;font-size:14px;z-index:9;opacity:0;
-  transition:opacity .2s;pointer-events:none}
+  transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
 .toast.show{opacity:1}
 [hidden]{display:none!important}
 </style>
@@ -110,6 +138,9 @@ const KR_HOLIDAYS = `2026-09-24 추석
 2026-10-09 한글날
 2026-12-25 성탄절
 2027-01-01 신정`;
+const KINDS = { read: '읽기', write: '쓰기', note: '정리' };
+const KIND_ORDER = ['read', 'write', 'note'];
+const LEVELS = ['안 봄', '봤음', '써봤음', '포인트'];
 
 /* ---------- 날짜 ---------- */
 const pad = n => String(n).padStart(2, '0');
@@ -118,26 +149,34 @@ const pd = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y,
 const today = () => ds(new Date());
 const addDays = (s, n) => { const d = pd(s); d.setDate(d.getDate() + n); return ds(d); };
 const diffDays = (a, b) => Math.round((pd(b) - pd(a)) / 864e5);
+const mondayOf = s => addDays(s, -((pd(s).getDay() + 6) % 7));
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 const fmtDate = s => { const d = pd(s); return `${d.getMonth() + 1}/${d.getDate()} (${DOW[d.getDay()]})`; };
-const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(pd(s));
+const isDate = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(pd(s));
 
 /* ---------- 상태 ---------- */
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 function defaults() {
-  return { v: 1,
-    settings: { start: today(), target: '', weekday: 4.5, weekend: 10, off: KR_HOLIDAYS },
-    logs: [], timer: null, groups: [] };
+  return { v: 2,
+    settings: { start: today(), target: '', weekday: 4.5, weekend: 10, off: KR_HOLIDAYS,
+      readMax: 40, unit: '쪽', speedGoal: 0, staleDays: 14 },
+    kind: 'write', logs: [], timer: null, pending: null, groups: [] };
 }
 function normalize(x) {
   const d = defaults();
   if (!x || typeof x !== 'object') return d;
-  return { v: 1,
+  return { v: 2,
     settings: Object.assign(d.settings, x.settings || {}),
-    logs: Array.isArray(x.logs) ? x.logs.filter(l => l && isDate(l.date) && l.min > 0) : [],
+    kind: KINDS[x.kind] ? x.kind : 'write',
+    lastExport: x.lastExport || null,
+    logs: Array.isArray(x.logs) ? x.logs.filter(l => l && isDate(l.date) && l.min > 0)
+      .map(l => Object.assign({ id: uid() }, l, { kind: KINDS[l.kind] ? l.kind : null })) : [],
     timer: x.timer && x.timer.start ? x.timer : null,
+    pending: x.pending && isDate(x.pending.date) ? x.pending : null,
     groups: Array.isArray(x.groups) ? x.groups.map(g => ({ id: g.id || uid(), name: String(g.name || ''),
-      open: g.open !== false, items: (g.items || []).map(i => ({ id: i.id || uid(), name: String(i.name || ''), done: !!i.done, doneAt: i.doneAt || null })) })) : [] };
+      open: g.open !== false, items: (g.items || []).map(i => ({ id: i.id || uid(), name: String(i.name || ''),
+        level: Number.isInteger(i.level) ? Math.max(0, Math.min(3, i.level)) : (i.done ? 1 : 0),
+        point: String(i.point || ''), lastWrite: isDate(i.lastWrite) ? i.lastWrite : null })) })) : [] };
 }
 let S;
 try { S = normalize(JSON.parse(localStorage.getItem(KEY))); } catch (e) { S = defaults(); }
@@ -188,6 +227,44 @@ function stats() {
     dday: diffDays(t, S.settings.target) });
   return o;
 }
+// 목표를 채운 날의 연속 기록. 오늘은 아직 진행 중이므로 채웠을 때만 센다.
+function streaks() {
+  const r = planRange(); if (!r) return { cur: 0, best: 0 };
+  const tgt = makeTargetFn(), bd = byDate(), t = today();
+  const hit = d => { const x = tgt(d); return x > 0 && (bd[d] || 0) >= x; };
+  let best = 0, run = 0;
+  for (let d = r.start; d <= r.end && d <= t; d = addDays(d, 1)) {
+    if (hit(d)) best = Math.max(best, ++run); else if (d < t) run = 0;
+  }
+  let cur = 0, d = hit(t) ? t : addDays(t, -1);
+  while (d >= r.start && hit(d)) { cur++; d = addDays(d, -1); }
+  return { cur, best };
+}
+function allItems() { const a = []; S.groups.forEach(g => g.items.forEach(i => a.push({ g, i }))); return a; }
+function findItem(key) {
+  if (!key) return {};
+  for (const g of S.groups) { const i = g.items.find(x => x.id === key); if (i) return { g, i }; }
+  return {};
+}
+// 오늘 써볼 것: 오래 안 쓴 항목 2개 + 아직 안 써본 항목으로 3개를 채운다.
+function suggestions() {
+  const t = today(), n = +S.settings.staleDays || 14, all = allItems();
+  const stale = all.filter(x => x.i.level >= 2)
+    .map(x => ({ ...x, age: x.i.lastWrite ? diffDays(x.i.lastWrite, t) : 999 }))
+    .filter(x => x.age >= n).sort((a, b) => b.age - a.age);
+  const fresh = all.filter(x => x.i.level < 2).sort((a, b) => b.i.level - a.i.level);
+  const pick = stale.slice(0, 2);
+  fresh.forEach(x => { if (pick.length < 3) pick.push(x); });
+  stale.slice(2).forEach(x => { if (pick.length < 3) pick.push(x); });
+  return pick;
+}
+function weekKinds(mon) {
+  const end = addDays(mon, 6), k = { read: 0, write: 0, note: 0, none: 0 };
+  S.logs.forEach(l => { if (l.date >= mon && l.date <= end) k[l.kind || 'none'] += l.min; });
+  return k;
+}
+const writeSessions = () => S.logs.filter(l => l.kind === 'write' && l.amount > 0)
+  .sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.at || 0) - (b.at || 0));
 
 /* ---------- 포맷 ---------- */
 function fmtMin(m) {
@@ -198,31 +275,64 @@ function fmtMin(m) {
 }
 const fmtH = m => (Math.round(m / 6) / 10).toLocaleString('ko-KR') + 'h';
 const pct = (a, b) => b > 0 ? Math.min(100, Math.round(a / b * 100)) : 0;
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const r1 = x => Math.round(x * 10) / 10;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const unit = () => esc(S.settings.unit || '쪽');
+const logTopic = l => { const { i } = findItem(l.itemId); return i ? i.name : (l.topic || ''); };
 function toast(msg) {
   const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show');
-  clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 1800);
+  clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2200);
+}
+const kindDot = k => `<span class="dot" style="background:var(--k-${k || 'none'})"></span>`;
+function itemOptions(sel) {
+  let h = `<option value="">범위 항목 선택 안 함</option>`;
+  S.groups.forEach(g => {
+    if (!g.items.length) return;
+    h += `<optgroup label="${esc(g.name)}">` + g.items.map(i =>
+      `<option value="${i.id}" ${i.id === sel ? 'selected' : ''}>${esc(i.name)} · ${LEVELS[i.level]}</option>`).join('') + '</optgroup>';
+  });
+  return h;
 }
 
 /* ---------- 기록 조작 ---------- */
-function addLog(date, min, note) {
-  min = Math.round(min);
-  if (!isDate(date) || !(min > 0)) return toast('날짜와 시간을 확인하세요');
-  S.logs.push({ id: uid(), date, min, note: (note || '').trim(), at: Date.now() });
-  save(); toast(`${fmtDate(date)} +${fmtMin(min)}`); render();
+function addLog(e) {
+  const min = Math.round(e.min);
+  if (!isDate(e.date) || !(min > 0)) return toast('날짜와 시간을 확인하세요');
+  const l = { id: uid(), date: e.date, min, kind: KINDS[e.kind] ? e.kind : null, note: (e.note || '').trim(), at: Date.now() };
+  if (l.kind === 'write') {
+    if (e.itemId) l.itemId = e.itemId;
+    if (e.topic) l.topic = e.topic.trim();
+    if (e.amount > 0) l.amount = +e.amount;
+    const { i } = findItem(e.itemId);
+    if (i) { i.level = Math.max(i.level, 2); if (!i.lastWrite || i.lastWrite < l.date) i.lastWrite = l.date; }
+  }
+  S.logs.push(l);
+  save(); toast(`${fmtDate(l.date)} ${l.kind ? KINDS[l.kind] + ' ' : ''}+${fmtMin(min)}`); render();
+}
+// 쓰기는 분량을 받아야 하므로 바로 저장하지 않고 입력 카드를 띄운다.
+function record(date, min, kind, itemId) {
+  if (kind === 'write') { S.pending = { date, min: Math.round(min), itemId: itemId || null }; save(); tab = 'today'; render(); scrollTo(0, 0); }
+  else addLog({ date, min, kind });
+}
+function startTimer(itemId) {
+  if (S.timer) return;
+  if (itemId) S.kind = 'write';
+  S.timer = { start: Date.now(), kind: S.kind, itemId: itemId || null };
+  save(); tab = 'today'; render(); scrollTo(0, 0);
 }
 function stopTimer() {
-  const st = S.timer.start; let min = Math.round((Date.now() - st) / 6e4);
+  const tm = S.timer; let min = Math.round((Date.now() - tm.start) / 6e4);
   if (min > 16 * 60 && !confirm(`타이머가 ${fmtMin(min)} 동안 켜져 있었습니다. 그대로 기록할까요?`)) {
     const v = prompt('기록할 시간(분)', '60'); if (v === null) return; min = +v;
   }
   S.timer = null; save();
-  if (min >= 1) addLog(ds(new Date(st)), min, '타이머'); else { toast('1분 미만은 기록하지 않았습니다'); render(); }
+  if (min >= 1) record(ds(new Date(tm.start)), min, tm.kind, tm.itemId);
+  else { toast('1분 미만은 기록하지 않았습니다'); render(); }
 }
 
 /* ---------- 화면 ---------- */
 let tab = S.settings.target ? 'today' : 'settings';
-let editScope = false;
+let editScope = false, showPoints = false;
 const V = {};
 
 V.today = () => {
@@ -230,10 +340,22 @@ V.today = () => {
   let h = `<h1>오늘 <span class="mute small">${fmtDate(s.today)}</span></h1>`;
   if (!s.r) h += `<div class="banner">설정에서 <b>시작일·목표일</b>을 입력하면 목표 대비 진행률이 계산됩니다.</div>`;
 
+  if (S.pending) {
+    const p = S.pending;
+    h += `<div class="card hi"><h2>${kindDot('write')}쓰기 기록 · ${fmtDate(p.date)} ${fmtMin(p.min)}</h2>
+      <label>무엇을 썼나요</label><select id="pwItem">${itemOptions(p.itemId)}</select>
+      <input id="pwTopic" placeholder="또는 직접 입력 (선택)" style="margin-top:6px">
+      <label>분량 (${unit()})</label><input type="number" id="pwAmt" inputmode="decimal" step="0.5" min="0" placeholder="예: 2">
+      <div class="grid2" style="margin-top:10px"><button data-act="pw-cancel" class="danger">버리기</button><button class="pri" data-act="pw-save">저장</button></div></div>`;
+  }
+
   const run = S.timer ? Date.now() - S.timer.start : 0;
-  h += `<div class="card"><h2>타이머</h2>
+  const tItem = S.timer && findItem(S.timer.itemId).i;
+  h += `<div class="card"><div class="seg">${KIND_ORDER.map(k =>
+      `<button data-kind="${k}" class="${(S.timer ? S.timer.kind : S.kind) === k ? 'on' : ''}" ${S.timer ? 'disabled' : ''}>${kindDot(k)}${KINDS[k]}</button>`).join('')}</div>
     <div class="timer" id="timerTxt">${clock(run)}</div>
-    <button class="timerbtn ${S.timer ? '' : 'pri'}" data-act="timer">${S.timer ? '정지하고 기록' : '시작'}</button>
+    ${tItem ? `<div class="topic" style="margin:-4px 0 10px">주제: <b>${esc(tItem.name)}</b></div>` : ''}
+    <button class="timerbtn ${S.timer ? '' : 'pri'}" data-act="timer">${S.timer ? '정지하고 기록' : KINDS[S.kind] + ' 시작'}</button>
     ${S.timer ? `<div class="small mute" style="text-align:center;margin-top:6px">${new Date(S.timer.start).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 시작 · <button class="ghost" data-act="timer-cancel">취소</button></div>` : ''}
   </div>`;
 
@@ -242,20 +364,29 @@ V.today = () => {
     <div class="bar"><i style="width:${pct(s.todayMin, s.todayTarget)}%"></i></div>
     <div class="grid3" style="margin-top:10px">
       <button data-add="15">+15분</button><button data-add="30">+30분</button><button data-add="60">+1시간</button>
-    </div></div>`;
+    </div><div class="small mute" style="margin-top:6px">빠른 추가는 위에서 고른 활동(${KINDS[S.kind]})으로 기록됩니다.</div></div>`;
+
+  const sug = suggestions();
+  if (sug.length) {
+    h += `<div class="card"><h2>오늘 써볼 것</h2><div class="list">` + sug.map(x => {
+      const why = x.i.level >= 2 ? (x.i.lastWrite ? `${diffDays(x.i.lastWrite, s.today)}일 전에 씀` : '쓴 날짜 없음') : x.i.level === 1 ? '봤지만 안 써봄' : '아직 안 봄';
+      return `<div class="it"><div class="grow"><div>${esc(x.i.name)}</div><div class="small mute">${esc(x.g.name)} · ${why}</div></div>
+        <button data-go="${x.i.id}" ${S.timer ? 'disabled' : ''}>쓰기</button></div>`;
+    }).join('') + `</div></div>`;
+  }
 
   if (s.r) {
-    const mon = addDays(s.today, -((pd(s.today).getDay() + 6) % 7)), bd = byDate();
+    const mon = mondayOf(s.today), bd = byDate();
     let wa = 0, wt = 0, cols = '';
     for (let i = 0; i < 7; i++) {
       const d = addDays(mon, i), a = bd[d] || 0, t = tgt(d); wa += a; wt += t;
       const hgt = t ? pct(a, t) : (a ? 100 : 0);
-      cols += `<div class="wd ${d === s.today ? 'today' : ''} ${isOffDay(d, off) ? 'off' : ''}">
+      cols += `<div class="wd ${d === s.today ? 'today' : ''}">
         <div class="col"><i style="height:${hgt}%"></i></div>${DOW[pd(d).getDay()]}<div class="num">${a ? fmtH(a) : '·'}</div></div>`;
     }
     h += `<div class="card"><h2>이번 주</h2>
       <div class="row between"><span class="big">${fmtH(wa)}</span><span class="mute num">/ ${fmtH(wt)} · ${pct(wa, wt)}%</span></div>
-      <div class="week">${cols}</div></div>`;
+      <div class="week">${cols}</div>${mixView(weekKinds(mon))}</div>`;
 
     const dd = s.dday > 0 ? `D-${s.dday}` : s.dday === 0 ? 'D-Day' : `D+${-s.dday}`;
     h += `<div class="card"><div class="row between"><h2>전체</h2><span class="small mute">목표일 ${fmtDate(S.settings.target)}</span></div>
@@ -267,52 +398,150 @@ V.today = () => {
       <div class="stat"><span>남은 가용 시간 (오늘 포함)</span><b class="num">${fmtH(s.planFrom)}</b></div>
       <div class="stat"><span>필요 페이스</span><b class="num ${s.pace !== null && s.pace > 1 ? 'neg' : 'pos'}">${s.pace === null ? '—' : Math.round(s.pace * 100) + '%'}</b></div>
       </div><div class="small mute" style="margin-top:6px">필요 페이스 100% = 남은 날 매일 목표만큼 하면 총량을 채움</div></div>`;
+    h += heatView(s.r);
   }
   return h;
 };
 
+// 이번 주 활동 비중 — 회독이 상한을 넘으면 경고
+function mixView(k) {
+  const total = k.read + k.write + k.note + k.none;
+  if (!total) return `<div class="small mute" style="margin-top:10px">이번 주 활동 비중은 기록이 쌓이면 표시됩니다.</div>`;
+  const keys = [...KIND_ORDER, 'none'].filter(x => k[x] > 0);
+  const name = x => x === 'none' ? '미분류' : KINDS[x];
+  let h = `<div style="margin-top:14px" class="small mute">활동 비중</div><div class="stack">` +
+    keys.map(x => `<i style="width:${k[x] / total * 100}%;background:var(--k-${x})" title="${name(x)} ${fmtH(k[x])}"></i>`).join('') + '</div>';
+  h += `<div class="legend">` + keys.map(x => `<span>${kindDot(x)}${name(x)} <b class="num">${Math.round(k[x] / total * 100)}%</b> <span class="mute num">${fmtH(k[x])}</span></span>`).join('') + '</div>';
+  const readPct = k.read / total * 100, max = +S.settings.readMax || 0;
+  if (max && readPct > max) h += `<div class="warnbox"><span>⚠</span><span>회독이 ${Math.round(readPct)}%로 상한 ${max}%를 넘었습니다. 쓰기로 옮기세요.</span></div>`;
+  return h;
+}
+
+// 계획 기간 달력 히트맵 (목표 대비 달성률 4단계)
+function heatView(r) {
+  const tgt = makeTargetFn(), bd = byDate(), t = today(), st = streaks();
+  const first = mondayOf(r.start), last = addDays(mondayOf(r.end), 6);
+  let cells = '<b></b>' + ['월', '', '수', '', '금', '', '일'].map(x => `<b>${x}</b>`).join('');
+  let prevMonth = -1;
+  for (let w = first; w <= last; w = addDays(w, 7)) {
+    const m = pd(w).getMonth();
+    cells += `<b>${m !== prevMonth ? (m + 1) + '월' : ''}</b>`; prevMonth = m;
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(w, i);
+      if (d < r.start || d > r.end) { cells += '<i class="none"></i>'; continue; }
+      const a = bd[d] || 0, x = tgt(d), q = x ? a / x : 0;
+      let c = d > t ? 'fut' : q >= 1 ? 'l3' : q >= .5 ? 'l2' : q > 0 ? 'l1' : '';
+      if (d === t) c += ' now';
+      cells += `<i class="${c}" data-heat="${d}"></i>`;
+    }
+  }
+  return `<div class="card"><div class="row between"><h2>달력</h2><span class="small mute">연속 달성 <b class="num" style="color:var(--ink)">${st.cur}일</b> · 최장 ${st.best}일</span></div>
+    <div class="scroll"><div class="heat" style="grid-template-columns:18px">${cells}</div></div>
+    <div class="legend small mute" style="margin-top:8px;gap:4px">
+      <span>목표 대비</span><span class="dot" style="background:var(--track);border-radius:3px"></span>0
+      <span class="dot" style="background:color-mix(in srgb,var(--acc) 35%,var(--track));border-radius:3px;margin-left:6px"></span>~50%
+      <span class="dot" style="background:color-mix(in srgb,var(--acc) 65%,var(--track));border-radius:3px;margin-left:6px"></span>~100%
+      <span class="dot" style="background:var(--acc);border-radius:3px;margin-left:6px"></span>달성</div>
+    <div class="tip mute" id="heatTip">칸을 누르면 그날 기록이 보입니다.</div></div>`;
+}
+
+// 작성 속도: 단위 분량당 걸린 분. 낮을수록 빠름.
+function speedView() {
+  const ws = writeSessions().slice(-20), u = unit(), goal = +S.settings.speedGoal || 0;
+  if (!ws.length) return `<div class="card"><h2>${kindDot('write')}작성 속도</h2><div class="small mute">쓰기 기록에 분량을 입력하면 ${u}당 걸린 시간 추이가 여기에 그려집니다.</div></div>`;
+  const rate = l => l.min / l.amount, ys = ws.map(rate);
+  const W = 320, H = 150, L = 30, R = 8, T = 10, B = 20;
+  const ymax = Math.max(...ys, goal) * 1.15 || 1;
+  const X = i => ws.length === 1 ? (L + W - R) / 2 : L + i * (W - L - R) / (ws.length - 1);
+  const Y = v => T + (1 - v / ymax) * (H - T - B);
+  let g = '';
+  [0, .5, 1].forEach(f => { const v = ymax * f; g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${L - 4}" y="${Y(v) + 3}" text-anchor="end">${Math.round(v)}</text>`; });
+  if (goal) g += `<line x1="${L}" x2="${W - R}" y1="${Y(goal)}" y2="${Y(goal)}" stroke="var(--mute)" stroke-dasharray="4 3"/><text x="${W - R}" y="${Y(goal) - 4}" text-anchor="end">목표 ${goal}분</text>`;
+  g += `<text x="${L}" y="${H - 4}">${fmtDate(ws[0].date)}</text><text x="${W - R}" y="${H - 4}" text-anchor="end">${fmtDate(ws[ws.length - 1].date)}</text>`;
+  g += `<polyline fill="none" stroke="var(--k-write)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${ws.map((l, i) => `${X(i)},${Y(ys[i])}`).join(' ')}"/>`;
+  ws.forEach((l, i) => {
+    const slow = goal && ys[i] > goal;
+    g += `<circle cx="${X(i)}" cy="${Y(ys[i])}" r="4" fill="${slow ? 'var(--card)' : 'var(--k-write)'}" stroke="var(--k-write)" stroke-width="2"/>
+      <circle cx="${X(i)}" cy="${Y(ys[i])}" r="13" fill="transparent" data-sp="${i}" style="cursor:pointer"/>`;
+  });
+  const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+  const all = writeSessions().map(rate), recent = all.slice(-5), prev = all.slice(-10, -5);
+  let trend = '';
+  if (prev.length >= 3) {
+    const ch = (avg(prev) - avg(recent)) / avg(prev) * 100;
+    trend = `<span class="${ch >= 0 ? 'pos' : 'neg'}">${ch >= 0 ? '▲ ' + Math.round(ch) + '% 빨라짐' : '▼ ' + Math.round(-ch) + '% 느려짐'}</span> <span class="mute">(직전 5회 대비)</span>`;
+  }
+  speedView.data = ws;
+  return `<div class="card chart"><div class="row between"><h2>${kindDot('write')}작성 속도 <span style="font-weight:400">· ${u}당 분, 낮을수록 빠름</span></h2></div>
+    <div class="row between"><span class="big">${r1(avg(recent))}분</span><span class="small num">${trend || '<span class="mute">최근 5회 평균</span>'}</span></div>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="작성 속도 추이">${g}</svg>
+    <div class="tip" id="spTip"><span class="mute">점을 누르면 상세가 보입니다.${goal ? ' 속이 빈 점은 목표보다 느린 회차.' : ''}</span></div></div>`;
+}
+
 V.log = () => {
-  let h = `<h1>기록</h1><div class="card"><h2>직접 추가</h2>
+  const k = S.kind;
+  let h = `<h1>기록</h1>` + speedView() + `<div class="card"><h2>직접 추가</h2>
+    <div class="seg">${KIND_ORDER.map(x => `<button data-kind="${x}" class="${k === x ? 'on' : ''}">${kindDot(x)}${KINDS[x]}</button>`).join('')}</div>
     <div class="grid3"><div style="grid-column:span 3"><label>날짜</label><input type="date" id="lgDate" value="${today()}"></div>
     <div><label>시간</label><input type="number" id="lgH" inputmode="numeric" min="0" placeholder="0"></div>
     <div><label>분</label><input type="number" id="lgM" inputmode="numeric" min="0" max="59" placeholder="0"></div>
-    <div><label>&nbsp;</label><button class="pri" style="width:100%" data-act="log-add">추가</button></div></div>
-    <label>메모 (선택)</label><input id="lgNote" maxlength="80"></div>`;
+    ${k === 'write' ? `<div><label>분량 (${unit()})</label><input type="number" id="lgAmt" inputmode="decimal" step="0.5" min="0" placeholder="0"></div>` : '<div></div>'}</div>
+    ${k === 'write' ? `<label>주제</label><select id="lgItem">${itemOptions('')}</select>` : ''}
+    <label>메모 (선택)</label><input id="lgNote" maxlength="80">
+    <button class="pri" style="width:100%;margin-top:10px" data-act="log-add">추가</button></div>`;
   const days = {};
   S.logs.forEach(l => (days[l.date] = days[l.date] || []).push(l));
   const keys = Object.keys(days).sort().reverse();
   if (!keys.length) return h + `<p class="mute">아직 기록이 없습니다.</p>`;
   h += '<div class="card list">';
-  keys.forEach((d, i) => {
+  keys.forEach((d, n) => {
     const tot = days[d].reduce((a, l) => a + l.min, 0);
-    h += `<div class="day" style="${i ? '' : 'margin-top:0'}"><span>${fmtDate(d)}</span><span class="num">${fmtMin(tot)}</span></div>`;
+    h += `<div class="day" style="${n ? '' : 'margin-top:0'}"><span>${fmtDate(d)}</span><span class="num">${fmtMin(tot)}</span></div>`;
     days[d].sort((a, b) => (a.at || 0) - (b.at || 0)).forEach(l => {
-      h += `<div class="it"><span class="num" style="width:78px">${fmtMin(l.min)}</span><span class="grow mute small">${esc(l.note || '')}</span>
-        <button class="ghost danger" data-del="${l.id}" aria-label="삭제">삭제</button></div>`;
+      const bits = [logTopic(l), l.amount ? `${l.amount}${S.settings.unit || '쪽'}` : '', l.note].filter(Boolean).map(esc).join(' · ');
+      h += `<div class="it"><span class="num" style="width:92px;flex:none">${kindDot(l.kind)}${fmtMin(l.min)}</span><span class="grow mute small">${bits}</span>
+        <button class="ghost danger" data-del="${l.id}">삭제</button></div>`;
     });
   });
   return h + '</div>';
 };
 
 V.scope = () => {
-  let all = 0, done = 0;
-  S.groups.forEach(g => g.items.forEach(i => { all++; if (i.done) done++; }));
-  let h = `<div class="row between"><h1>범위</h1><button class="${editScope ? 'pri' : ''}" data-act="scope-edit">${editScope ? '완료' : '편집'}</button></div>`;
-  h += `<div class="card"><div class="row between"><span class="big">${pct(done, all)}%</span><span class="mute num">${done} / ${all}</span></div>
-    <div class="bar"><i style="width:${pct(done, all)}%"></i></div></div>`;
+  const all = allItems(), n = all.length, c = [0, 0, 0, 0];
+  all.forEach(x => c[x.i.level]++);
+  const written = c[2] + c[3], seen = written + c[1];
+  let h = `<div class="row between"><h1>범위</h1><div class="row">
+    ${editScope ? '' : `<button class="${showPoints ? 'pri' : ''}" data-act="points">포인트 ${c[3]}</button>`}
+    <button class="${editScope ? 'pri' : ''}" data-act="scope-edit">${editScope ? '완료' : '편집'}</button></div></div>`;
+  h += `<div class="card"><div class="row between"><span class="big">${pct(written, n)}%</span><span class="mute small">써봤음 이상 ${written} / ${n}</span></div>
+    <div class="bar"><i class="soft" style="width:${pct(seen, n)}%"></i><i style="width:${pct(written, n)}%"></i></div>
+    <div class="legend small mute" style="margin-top:6px">${LEVELS.map((x, k) => `<span>${x} <b class="num" style="color:var(--ink)">${c[k]}</b></span>`).join('')}</div>
+    ${editScope || showPoints ? '' : `<div class="small mute" style="margin-top:6px">항목을 누를 때마다 안 봄 → 봤음 → 써봤음 → 포인트. 쓰기 기록에 주제를 고르면 자동으로 써봤음이 됩니다.</div>`}</div>`;
+
+  if (showPoints && !editScope) {
+    const pts = all.filter(x => x.i.level === 3);
+    if (!pts.length) return h + `<p class="mute">아직 포인트가 없습니다. 써봤음 항목을 한 번 더 누르면 한 줄 포인트를 남길 수 있습니다.</p>`;
+    S.groups.forEach(g => {
+      const ps = g.items.filter(i => i.level === 3); if (!ps.length) return;
+      h += `<div class="card"><h2>${esc(g.name)}</h2><div class="list">` + ps.map(i =>
+        `<div class="it" data-lv="${i.id}"><div class="grow"><div>${esc(i.name)}</div><div class="pt">${esc(i.point)}</div></div></div>`).join('') + '</div></div>';
+    });
+    return h;
+  }
   if (!S.groups.length && !editScope) h += `<div class="banner"><b>편집</b>을 눌러 범위 목록을 붙여넣으세요.</div>`;
   S.groups.forEach(g => {
-    const gd = g.items.filter(i => i.done).length;
+    const gw = g.items.filter(i => i.level >= 2).length, gs = g.items.filter(i => i.level >= 1).length;
     h += `<div class="card"><div class="grp-h" data-toggle="${g.id}"><span class="mute">${g.open ? '▾' : '▸'}</span>
-      <span class="grow">${esc(g.name)}</span><span class="small mute num">${gd}/${g.items.length}</span></div>
-      <div class="bar" style="margin-bottom:0"><i style="width:${pct(gd, g.items.length)}%"></i></div>`;
+      <span class="grow">${esc(g.name)}</span><span class="small mute num">${gw}/${g.items.length}</span></div>
+      <div class="bar" style="margin-bottom:0"><i class="soft" style="width:${pct(gs, g.items.length)}%"></i><i style="width:${pct(gw, g.items.length)}%"></i></div>`;
     if (g.open || editScope) {
       h += '<div class="list" style="margin-top:6px">';
       g.items.forEach(i => {
-        h += `<div class="it ${i.done ? 'done' : ''}" ${editScope ? '' : `data-check="${g.id}:${i.id}"`}>
-          ${editScope ? '' : `<span class="chk ${i.done ? 'on' : ''}">${i.done ? '✓' : ''}</span>`}
-          <span class="grow">${esc(i.name)}</span>
-          ${editScope ? `<button class="ghost danger" data-idel="${g.id}:${i.id}">삭제</button>` : ''}</div>`;
+        h += `<div class="it" ${editScope ? '' : `data-lv="${i.id}"`} style="cursor:pointer">
+          <span class="lv lv${i.level}">${LEVELS[i.level]}</span>
+          <div class="grow"><div>${esc(i.name)}</div>${i.level === 3 && i.point ? `<div class="pt">${esc(i.point)}</div>` : ''}
+          ${i.lastWrite && !editScope ? `<div class="pt">마지막 작성 ${fmtDate(i.lastWrite)}</div>` : ''}</div>
+          ${editScope ? `${i.level ? `<button class="ghost" data-ireset="${i.id}">초기화</button>` : ''}<button class="ghost danger" data-idel="${i.id}">삭제</button>` : ''}</div>`;
       });
       h += '</div>';
       if (editScope) h += `<div class="row wrap" style="margin-top:8px"><button data-gren="${g.id}">이름 변경</button>
@@ -340,9 +569,16 @@ V.settings = () => {
     <label>휴일·연차 (한 줄에 하나, YYYY-MM-DD 메모)</label>
     <textarea id="stOff">${esc(st.off)}</textarea>
     <div class="small mute" style="margin-top:4px">여기 적힌 날은 주말·휴일 목표로 계산합니다. 기본값은 공휴일이니 확인 후 연차를 추가하세요.</div>
-    <button class="pri" style="width:100%;margin-top:10px" data-act="set-save">저장</button>
     ${r ? `<div class="small mute" style="margin-top:8px">목표일 전날까지 ${days}일 · 총 계획 ${fmtH(total)}</div>` : ''}
   </div>
+  <div class="card"><h2>훈련 기준</h2>
+    <div class="grid2">
+    <div><label>회독 상한 (주간 %)</label><input type="number" id="stRead" min="0" max="100" inputmode="numeric" value="${st.readMax}"></div>
+    <div><label>분량 단위</label><input id="stUnit" maxlength="6" value="${esc(st.unit)}"></div>
+    <div><label>목표 속도 (분/단위, 0=없음)</label><input type="number" id="stSpeed" min="0" step="1" inputmode="decimal" value="${st.speedGoal}"></div>
+    <div><label>잊혀감 기준 (일)</label><input type="number" id="stStale" min="1" inputmode="numeric" value="${st.staleDays}"></div></div>
+  </div>
+  <button class="pri" style="width:100%;margin-bottom:12px;min-height:48px" data-act="set-save">저장</button>
   <div class="card"><h2>백업</h2>
     <div class="small mute">데이터는 이 기기의 브라우저에만 저장됩니다. 홈 화면에 추가해 쓰고, 가끔 내보내 두세요.</div>
     <div class="grid2" style="margin-top:10px"><button data-act="export">내보내기</button><button data-act="import">가져오기</button></div>
@@ -360,7 +596,7 @@ function render() {
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
 }
 setInterval(() => { const el = document.getElementById('timerTxt'); if (el && S.timer) el.textContent = clock(Date.now() - S.timer.start); }, 1000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !document.activeElement.matches('input,textarea,select')) render(); });
 
 /* ---------- 백업 ---------- */
 async function exportData() {
@@ -386,36 +622,67 @@ document.getElementById('fileIn').addEventListener('change', async e => {
 });
 
 /* ---------- 이벤트 ---------- */
-const val = id => document.getElementById(id).value;
-const findItem = key => { const [gid, iid] = key.split(':'); const g = S.groups.find(x => x.id === gid); return { g, i: g && g.items.find(x => x.id === iid) }; };
+const val = id => { const el = document.getElementById(id); return el ? el.value : ''; };
 document.getElementById('nav').addEventListener('click', e => {
   const b = e.target.closest('[data-tab]'); if (!b) return;
   tab = b.dataset.tab; render(); scrollTo(0, 0);
 });
 document.getElementById('app').addEventListener('click', e => {
-  const el = e.target.closest('button,[data-check],[data-toggle]'); if (!el) return;
+  const el = e.target.closest('button,[data-lv],[data-toggle],[data-heat],[data-sp]'); if (!el) return;
   const d = el.dataset;
-  if (d.add) return addLog(today(), +d.add, '빠른 추가');
+  if (d.kind) { if (!S.timer) { S.kind = d.kind; save(); render(); } return; }
+  if (d.add) return record(today(), +d.add, S.kind);
+  if (d.go) return startTimer(d.go);
+  if (d.heat) {
+    const x = makeTargetFn()(d.heat), a = byDate()[d.heat] || 0;
+    document.getElementById('heatTip').innerHTML = `<b>${fmtDate(d.heat)}</b> ${fmtMin(a)} / ${fmtMin(x)} <span class="mute">(${x ? Math.round(a / x * 100) : 0}%)</span>`;
+    return;
+  }
+  if (d.sp) {
+    const l = speedView.data[+d.sp];
+    document.getElementById('spTip').innerHTML = `<b>${fmtDate(l.date)}</b> ${esc(logTopic(l) || '주제 없음')} · ${fmtMin(l.min)} / ${l.amount}${unit()} = <b>${r1(l.min / l.amount)}분</b>`;
+    return;
+  }
   if (d.del) { const l = S.logs.find(x => x.id === d.del); if (l && confirm(`${fmtDate(l.date)} ${fmtMin(l.min)} 기록을 삭제할까요?`)) { S.logs = S.logs.filter(x => x !== l); save(); render(); } return; }
-  if (d.check) { const { i } = findItem(d.check); if (i) { i.done = !i.done; i.doneAt = i.done ? today() : null; save(); render(); } return; }
+  if (d.lv) {
+    const { i } = findItem(d.lv); if (!i) return;
+    if (i.level < 2) i.level++;
+    else if (i.level === 2 || i.level === 3) {
+      const p = prompt(i.level === 2 ? '차별화 포인트 한 줄 (사례·도식·논점)' : '포인트 수정 (비우면 써봤음으로 되돌림)', i.point);
+      if (p === null) return;
+      if (p.trim()) { i.point = p.trim(); i.level = 3; } else if (i.level === 3) { i.level = 2; }
+      else return;
+    }
+    if (i.level === 2 && !i.lastWrite) i.lastWrite = today();
+    save(); render(); return;
+  }
   if (d.toggle) { if (editScope) return; const g = S.groups.find(x => x.id === d.toggle); g.open = !g.open; save(); render(); return; }
-  if (d.idel) { const { g, i } = findItem(d.idel); g.items = g.items.filter(x => x !== i); save(); render(); return; }
+  if (d.ireset) { const { i } = findItem(d.ireset); if (i && confirm(`'${i.name}'을(를) 안 봄으로 되돌릴까요? 포인트도 지워집니다.`)) { Object.assign(i, { level: 0, point: '', lastWrite: null }); save(); render(); } return; }
+  if (d.idel) { const { g, i } = findItem(d.idel); if (g) { g.items = g.items.filter(x => x !== i); save(); render(); } return; }
   if (d.gren) { const g = S.groups.find(x => x.id === d.gren); const n = prompt('그룹 이름', g.name); if (n && n.trim()) { g.name = n.trim(); save(); render(); } return; }
   if (d.gup) { const k = S.groups.findIndex(x => x.id === d.gup); if (k > 0) { [S.groups[k - 1], S.groups[k]] = [S.groups[k], S.groups[k - 1]]; save(); render(); } return; }
   if (d.gdel) { const g = S.groups.find(x => x.id === d.gdel); if (confirm(`'${g.name}' 그룹과 항목 ${g.items.length}개를 삭제할까요?`)) { S.groups = S.groups.filter(x => x !== g); save(); render(); } return; }
   switch (d.act) {
     case 'timer':
-      if (S.timer) stopTimer(); else { S.timer = { start: Date.now() }; save(); render(); }
+      if (S.timer) stopTimer(); else startTimer(null);
       break;
     case 'timer-cancel':
       if (confirm('타이머를 기록 없이 취소할까요?')) { S.timer = null; save(); render(); }
       break;
+    case 'pw-save': {
+      const p = S.pending; S.pending = null;
+      addLog({ date: p.date, min: p.min, kind: 'write', itemId: val('pwItem'), topic: val('pwTopic'), amount: +val('pwAmt') || 0 });
+      break;
+    }
+    case 'pw-cancel':
+      if (confirm(`${fmtMin(S.pending.min)} 쓰기 기록을 버릴까요?`)) { S.pending = null; save(); render(); }
+      break;
     case 'log-add':
-      addLog(val('lgDate'), (+val('lgH') || 0) * 60 + (+val('lgM') || 0), val('lgNote'));
+      addLog({ date: val('lgDate'), min: (+val('lgH') || 0) * 60 + (+val('lgM') || 0), kind: S.kind,
+        itemId: val('lgItem'), amount: +val('lgAmt') || 0, note: val('lgNote') });
       break;
-    case 'scope-edit':
-      editScope = !editScope; render();
-      break;
+    case 'points': showPoints = !showPoints; render(); break;
+    case 'scope-edit': editScope = !editScope; render(); break;
     case 'bulk': {
       let cur = null, n = 0;
       val('bulk').split('\n').map(s => s.trim()).filter(Boolean).forEach(line => {
@@ -425,7 +692,7 @@ document.getElementById('app').addEventListener('click', e => {
           if (!cur) { cur = { id: uid(), name, open: true, items: [] }; S.groups.push(cur); }
         } else {
           if (!cur) { cur = S.groups[S.groups.length - 1]; if (!cur) { cur = { id: uid(), name: '기본', open: true, items: [] }; S.groups.push(cur); } }
-          cur.items.push({ id: uid(), name: line.replace(/^[-*•]\s*/, ''), done: false, doneAt: null }); n++;
+          cur.items.push({ id: uid(), name: line.replace(/^[-*•]\s*/, ''), level: 0, point: '', lastWrite: null }); n++;
         }
       });
       save(); toast(`항목 ${n}개 추가`); render();
@@ -435,7 +702,9 @@ document.getElementById('app').addEventListener('click', e => {
       const start = val('stStart'), target = val('stTarget'), wd = +val('stWd'), we = +val('stWe');
       if (!isDate(start) || !isDate(target) || start >= target) return toast('시작일이 목표일보다 앞서야 합니다');
       if (!(wd >= 0 && wd <= 24 && we >= 0 && we <= 24)) return toast('목표 시간은 0~24 사이');
-      Object.assign(S.settings, { start, target, weekday: wd, weekend: we, off: val('stOff') });
+      Object.assign(S.settings, { start, target, weekday: wd, weekend: we, off: val('stOff'),
+        readMax: Math.max(0, Math.min(100, +val('stRead') || 0)), unit: val('stUnit').trim() || '쪽',
+        speedGoal: Math.max(0, +val('stSpeed') || 0), staleDays: Math.max(1, Math.round(+val('stStale') || 14)) });
       save(); toast('저장했습니다'); render();
       break;
     }

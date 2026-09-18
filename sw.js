@@ -1,5 +1,5 @@
 // 네트워크 우선, 실패 시 캐시 — 오프라인에서도 열리고 배포 후엔 새 버전을 받는다.
-const CACHE = 'studytrack-v1';
+const CACHE = 'studytrack-v2';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
