@@ -17,13 +17,13 @@
 :root{
   --bg:#f6f5f2;--card:#fff;--ink:#1c1c1e;--mute:#6e6e73;--line:#e3e1dc;
   --acc:#2f6f5e;--acc-ink:#fff;--acc-soft:#dcebe5;--warn:#b5542d;--track:#ecebe7;
-  --k-read:#2a78d6;--k-write:#eb6834;--k-note:#1baf7a;--k-none:#b9b7b1;
+  --k-read:#2a78d6;--k-write:#eb6834;--k-note:#1baf7a;--k-recall:#eda100;--k-none:#b9b7b1;
   --r:14px;
 }
 @media (prefers-color-scheme: dark){
   :root{--bg:#111213;--card:#1c1d1f;--ink:#f2f2f2;--mute:#9a9a9f;--line:#2c2d30;
     --acc:#6cc3a6;--acc-ink:#0d1f19;--acc-soft:#1f3a32;--warn:#e88a63;--track:#2a2b2e;
-    --k-read:#3987e5;--k-write:#d95926;--k-note:#199e70;--k-none:#55544f}
+    --k-read:#3987e5;--k-write:#d95926;--k-note:#199e70;--k-recall:#c98500;--k-none:#55544f}
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink)}
@@ -64,9 +64,21 @@ label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
 /* iOS Safari: date 입력은 고유 최소 너비가 있어 칸을 넘친다 */
 input[type=date]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;height:42px;text-align:left}
 input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
-.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:var(--track);border-radius:11px;padding:3px}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;background:var(--track);border-radius:11px;padding:3px}
 .seg button{border:0;background:transparent;min-height:36px;border-radius:8px;color:var(--mute);padding:4px}
 .seg button.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.seg.s5{grid-template-columns:repeat(5,1fr)}
+.seg.s5 button.on{background:var(--acc);color:var(--acc-ink)}
+.score{display:grid;grid-template-columns:52px 1fr;gap:8px;align-items:center;margin-top:6px}
+.score>span{font-size:13px;color:var(--mute)}
+.spark{display:flex;gap:2px;align-items:end;height:28px}
+.spark>i{flex:1;max-width:14px;background:var(--acc);border-radius:3px 3px 0 0;min-height:2px}
+.srow{display:grid;grid-template-columns:52px 1fr 84px;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.srow:first-of-type{border-top:0}
+.fc{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin:4px 0 10px}
+.fc b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.fc span{font-size:12px;color:var(--mute)}
+a.btn{display:flex;align-items:center;justify-content:center;text-decoration:none}
 .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:1px;flex:none}
 .timer{font-size:40px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;margin:6px 0 10px}
 .timerbtn{width:100%;min-height:52px;font-size:17px}
@@ -142,8 +154,9 @@ const KR_HOLIDAYS = `2026-09-24 추석
 2026-10-09 한글날
 2026-12-25 성탄절
 2027-01-01 신정`;
-const KINDS = { read: '읽기', write: '쓰기', note: '정리' };
-const KIND_ORDER = ['read', 'write', 'note'];
+const KINDS = { read: '읽기', write: '쓰기', note: '정리', recall: '인출' };
+const KIND_ORDER = ['read', 'write', 'note', 'recall'];
+const CRIT = [['s', '구조'], ['v', '분량'], ['d', '차별화']];
 const LEVELS = ['안 봄', '봤음', '써봤음', '포인트'];
 
 /* ---------- 날짜 ---------- */
@@ -164,8 +177,13 @@ function defaults() {
   return { v: 2,
     settings: { start: today(), target: '', weekday: 4.5, weekend: 10, off: KR_HOLIDAYS,
       readMax: 40, unit: '쪽', speedGoal: 0, staleDays: 14 },
-    kind: 'write', logs: [], timer: null, pending: null, groups: [] };
+    kind: 'write', logs: [], timer: null, pending: null, groups: [], reviews: {} };
 }
+const cleanScore = x => {
+  if (!x || typeof x !== 'object') return null;
+  const o = {}; CRIT.forEach(([k]) => { if (x[k] >= 1 && x[k] <= 5) o[k] = Math.round(x[k]); });
+  return Object.keys(o).length ? o : null;
+};
 function normalize(x) {
   const d = defaults();
   if (!x || typeof x !== 'object') return d;
@@ -174,13 +192,16 @@ function normalize(x) {
     kind: KINDS[x.kind] ? x.kind : 'write',
     lastExport: x.lastExport || null,
     logs: Array.isArray(x.logs) ? x.logs.filter(l => l && isDate(l.date) && l.min > 0)
-      .map(l => Object.assign({ id: uid() }, l, { kind: KINDS[l.kind] ? l.kind : null })) : [],
+      .map(l => Object.assign({ id: uid() }, l, { kind: KINDS[l.kind] ? l.kind : null, score: cleanScore(l.score) })) : [],
+    reviews: x.reviews && typeof x.reviews === 'object' ? x.reviews : {},
     timer: x.timer && x.timer.start ? x.timer : null,
     pending: x.pending && isDate(x.pending.date) ? x.pending : null,
     groups: Array.isArray(x.groups) ? x.groups.map(g => ({ id: g.id || uid(), name: String(g.name || ''),
       open: g.open !== false, items: (g.items || []).map(i => ({ id: i.id || uid(), name: String(i.name || ''),
         level: Number.isInteger(i.level) ? Math.max(0, Math.min(3, i.level)) : (i.done ? 1 : 0),
-        point: String(i.point || ''), lastWrite: isDate(i.lastWrite) ? i.lastWrite : null })) })) : [] };
+        point: String(i.point || ''), lastWrite: isDate(i.lastWrite) ? i.lastWrite : null,
+        // 처음 써봤음이 된 날 — 커버리지 예측의 근거. 이전 버전 데이터는 마지막 작성일로 대신한다.
+        wroteAt: isDate(i.wroteAt) ? i.wroteAt : (i.level >= 2 ? (isDate(i.lastWrite) ? i.lastWrite : today()) : null) })) })) : [] };
 }
 let S;
 try { S = normalize(JSON.parse(localStorage.getItem(KEY))); } catch (e) { S = defaults(); }
@@ -263,11 +284,145 @@ function suggestions() {
   return pick;
 }
 function weekKinds(mon) {
-  const end = addDays(mon, 6), k = { read: 0, write: 0, note: 0, none: 0 };
+  const end = addDays(mon, 6), k = { read: 0, write: 0, note: 0, recall: 0, none: 0 };
   S.logs.forEach(l => { if (l.date >= mon && l.date <= end) k[l.kind || 'none'] += l.min; });
   return k;
 }
-const writeSessions = () => S.logs.filter(l => l.kind === 'write' && l.amount > 0)
+// 커버리지 예측: 최근 14일(계획 시작이 더 늦으면 그때부터) 동안 써봤음이 된 속도로 목표일까지 외삽한다.
+function coverageForecast() {
+  const all = allItems(), n = all.length, r = planRange(), t = today();
+  if (!n || !r) return null;
+  const written = all.filter(x => x.i.level >= 2).length;
+  const from = addDays(t, -13) > r.start ? addDays(t, -13) : r.start;
+  const span = Math.max(1, diffDays(from, t) + 1);
+  const recent = all.filter(x => x.i.level >= 2 && x.i.wroteAt && x.i.wroteAt >= from).length;
+  const perDay = recent / span, left = Math.max(0, diffDays(t, r.end));
+  const forecast = Math.min(n, written + perDay * left);
+  const weeksLeft = left / 7;
+  return { n, written, perWeek: perDay * 7, forecast, span, left,
+    need: weeksLeft > 0 ? (n - written) / weeksLeft : null };
+}
+// 한 주의 요약 — 주간 회고 카드와 저장된 회고에 쓰인다.
+function weekSummary(mon) {
+  const end = addDays(mon, 6), tgt = makeTargetFn(), bd = byDate();
+  let actual = 0, target = 0;
+  for (let d = mon; d <= end; d = addDays(d, 1)) { actual += bd[d] || 0; target += tgt(d); }
+  const k = weekKinds(mon), total = Object.values(k).reduce((a, b) => a + b, 0);
+  const ws = S.logs.filter(l => l.kind === 'write' && l.date >= mon && l.date <= end);
+  const rate = a => { const x = a.filter(l => l.amount > 0); return x.length ? x.reduce((s, l) => s + l.min / l.amount, 0) / x.length : null; };
+  const pm = addDays(mon, -7);
+  const prevRate = rate(S.logs.filter(l => l.kind === 'write' && l.date >= pm && l.date < mon));
+  const sc = {}; CRIT.forEach(([c]) => { const v = ws.filter(l => l.score && l.score[c]).map(l => l.score[c]); sc[c] = v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; });
+  const newly = allItems().filter(x => x.i.wroteAt && x.i.wroteAt >= mon && x.i.wroteAt <= end).length;
+  return { mon, actual, target, k, total, writes: ws.length, rate: rate(ws), prevRate, sc, newly };
+}
+// 다음 주 조정 제안: 규칙 기반, 해당하는 것만.
+function weekAdvice(w) {
+  const out = [], max = +S.settings.readMax || 0;
+  if (w.target && w.actual / w.target < .9) out.push(`목표의 ${Math.round(w.actual / w.target * 100)}%만 채웠습니다. 부족분 ${fmtH(w.target - w.actual)}을 주말에 나눠 넣거나 평일 목표를 현실에 맞게 조정하세요.`);
+  if (w.total && max && w.k.read / w.total * 100 > max) out.push(`회독이 ${Math.round(w.k.read / w.total * 100)}%였습니다. 다음 주엔 회독 ${fmtH(w.k.read - w.total * max / 100)}을 쓰기로 옮기세요.`);
+  if (w.writes < 3) out.push(`쓰기가 ${w.writes}회였습니다. 주 3회 이상 답안을 써 보세요.`);
+  if (w.sc.d !== null && w.sc.d < 3) out.push(`차별화 평균이 ${r1(w.sc.d)}점입니다. 범위의 '포인트' 단계를 채우는 데 시간을 쓰세요.`);
+  const f = coverageForecast();
+  if (f && f.need !== null && f.need > f.perWeek) out.push(`커버리지 100%를 위해 주 ${Math.ceil(f.need)}항목을 써봐야 하는데 지금은 주 ${r1(f.perWeek)}항목입니다.`);
+  if (!out.length) out.push('계획대로 가고 있습니다. 이번 주 방식을 유지하세요.');
+  return out;
+}
+// 회고를 띄울 주: 일요일이면 이번 주, 월·화에 지난주 회고가 비어 있으면 지난주.
+function reviewDue() {
+  const t = today(), w = pd(t).getDay(), mon = mondayOf(t);
+  if (w === 0 && !S.reviews[mon]) return mon;
+  const last = addDays(mon, -7);
+  if ((w === 1 || w === 2) && !S.reviews[last] && planRange() && last >= mondayOf(planRange().start)) return last;
+  return null;
+}
+
+/* ---------- 암기장 연동 ----------
+   같은 origin(gold-penguin.github.io)의 암기장 앱 IndexedDB 'flashcards'를 읽는다.
+   DB가 없을 때 새로 만들면 암기장 앱의 스키마 생성이 막히므로 업그레이드는 반드시 중단한다. */
+const FC = { stat: null, err: null };
+function fcOpen() {
+  return new Promise((res, rej) => {
+    if (!window.indexedDB) return rej(new Error('IndexedDB 없음'));
+    const r = indexedDB.open('flashcards');
+    r.onupgradeneeded = () => { r.transaction.abort(); };
+    r.onsuccess = () => {
+      const db = r.result;
+      if (!db.objectStoreNames.contains('cards')) { db.close(); return rej(new Error('없음')); }
+      res(db);
+    };
+    r.onerror = () => rej(new Error('없음'));
+    r.onblocked = () => rej(new Error('사용 중'));
+  });
+}
+function fcAll(db, name) {
+  return new Promise((res, rej) => {
+    if (!db.objectStoreNames.contains(name)) return res([]);
+    const q = db.transaction(name).objectStore(name).getAll();
+    q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
+  });
+}
+// 암기장은 새벽 4시에 하루가 바뀐다.
+function fcDayStart(now = Date.now()) {
+  const d = new Date(now); if (d.getHours() < 4) d.setDate(d.getDate() - 1);
+  d.setHours(4, 0, 0, 0); return +d;
+}
+async function fcLoad() {
+  let db;
+  try {
+    db = await fcOpen();
+    const cards = await fcAll(db, 'cards'), now = Date.now(), start = fcDayStart(now), end = start + 864e5;
+    let due = 0, done = 0, weak = 0, total = 0;
+    cards.forEach(c => {
+      if (c.suspended) return; total++;
+      if (c.last >= start) done++;
+      if (c.state === 'review') { if (c.due <= now) due++; }
+      else if (c.state !== 'new' && c.due < end) due++;
+      const lapses = c.lapses || 0;
+      if (c.state !== 'new' && (lapses >= 2 || (lapses >= 1 && (c.ease || 2.5) <= 2.1) || c.state === 'relearning')) weak++;
+    });
+    FC.stat = { due, done, weak, total }; FC.err = null;
+  } catch (e) { FC.stat = null; FC.err = e.message; }
+  finally { if (db) db.close(); }
+}
+// 범위의 포인트를 암기장 카드로 보낸다. 같은 항목은 key로 찾아 내용만 갱신한다.
+async function fcSendPoints() {
+  const pts = allItems().filter(x => x.i.level === 3 && x.i.point);
+  if (!pts.length) return toast('보낼 포인트가 없습니다');
+  let db;
+  try {
+    db = await fcOpen();
+    const [doms, cats, decks, cards] = await Promise.all(['domains', 'categories', 'decks', 'cards'].map(s => fcAll(db, s)));
+    if (!db.objectStoreNames.contains('decks')) throw new Error('암기장 구조가 다릅니다');
+    const now = Date.now(), put = { domains: [], categories: [], decks: [], cards: [] };
+    if (!doms.some(x => x.id === 'st-dom')) put.domains.push({ id: 'st-dom', name: '학습 트래커', created: now });
+    if (!cats.some(x => x.id === 'st-cat')) put.categories.push({ id: 'st-cat', domainId: 'st-dom', name: '차별화 포인트', created: now });
+    if (!decks.some(x => x.id === 'st-deck')) put.decks.push({ id: 'st-deck', catId: 'st-cat', name: '포인트', newPerDay: 20, showLabels: true,
+      newDate: '', newCount: 0, created: now, source: { file: '학습 트래커', sheet: '', front: ['주제'], back: ['포인트'] } });
+    const byKey = new Map(cards.filter(c => c.deckId === 'st-deck').map(c => [c.key, c]));
+    let order = cards.filter(c => c.deckId === 'st-deck').reduce((m, c) => Math.max(m, (c.order || 0) + 1), 0);
+    let added = 0, updated = 0;
+    pts.forEach(({ g, i }) => {
+      const key = 'ST␞' + i.id, front = [{ l: '주제', v: `${g.name} › ${i.name}` }], back = [{ l: '포인트', v: i.point }];
+      const ex = byKey.get(key);
+      if (ex) { if (JSON.stringify(ex.front) !== JSON.stringify(front) || JSON.stringify(ex.back) !== JSON.stringify(back)) { put.cards.push({ ...ex, front, back }); updated++; } }
+      else { put.cards.push({ id: 'st-' + i.id, deckId: 'st-deck', front, back, key, order: order++, state: 'new', step: 0, due: 0, ivl: 0, ease: 2.5, reps: 0, lapses: 0, created: now }); added++; }
+    });
+    await new Promise((res, rej) => {
+      const names = Object.keys(put).filter(s => put[s].length);
+      if (!names.length) return res();
+      const tx = db.transaction(names, 'readwrite');
+      names.forEach(s => put[s].forEach(v => tx.objectStore(s).put(v)));
+      tx.oncomplete = res; tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error || new Error('취소됨'));
+    });
+    toast(added || updated ? `암기장에 새 카드 ${added}장, 갱신 ${updated}장` : '암기장 카드가 이미 최신입니다');
+    fcLoad().then(render);
+  } catch (e) {
+    toast(e.message === '없음' ? '이 앱에서 암기장 데이터를 찾을 수 없습니다' : '보내기 실패: ' + e.message);
+  } finally { if (db) db.close(); }
+}
+const writeSessions = () => writeSessions.all().filter(l => l.amount > 0);
+writeSessions.all = () => S.logs.filter(l => l.kind === 'write')
   .sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.at || 0) - (b.at || 0));
 
 /* ---------- 포맷 ---------- */
@@ -288,6 +443,11 @@ function toast(msg) {
   clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2200);
 }
 const kindDot = k => `<span class="dot" style="background:var(--k-${k || 'none'})"></span>`;
+let draftScore = {};
+function scoreInput() {
+  return `<label>자기평가 (선택)</label>` + CRIT.map(([c, name]) => `<div class="score"><span>${name}</span><div class="seg s5">${[1, 2, 3, 4, 5].map(v =>
+    `<button data-sc="${c}:${v}" class="${draftScore[c] === v ? 'on' : ''}">${v}</button>`).join('')}</div></div>`).join('');
+}
 function itemOptions(sel) {
   let h = `<option value="">범위 항목 선택 안 함</option>`;
   S.groups.forEach(g => {
@@ -307,8 +467,12 @@ function addLog(e) {
     if (e.itemId) l.itemId = e.itemId;
     if (e.topic) l.topic = e.topic.trim();
     if (e.amount > 0) l.amount = +e.amount;
+    const sc = cleanScore(e.score); if (sc) l.score = sc;
     const { i } = findItem(e.itemId);
-    if (i) { i.level = Math.max(i.level, 2); if (!i.lastWrite || i.lastWrite < l.date) i.lastWrite = l.date; }
+    if (i) {
+      if (i.level < 2 || !i.wroteAt) i.wroteAt = i.wroteAt && i.wroteAt < l.date ? i.wroteAt : l.date;
+      i.level = Math.max(i.level, 2); if (!i.lastWrite || i.lastWrite < l.date) i.lastWrite = l.date;
+    }
   }
   S.logs.push(l);
   save(); toast(`${fmtDate(l.date)} ${l.kind ? KINDS[l.kind] + ' ' : ''}+${fmtMin(min)}`); render();
@@ -336,7 +500,7 @@ function stopTimer() {
 
 /* ---------- 화면 ---------- */
 let tab = S.settings.target ? 'today' : 'settings';
-let editScope = false, showPoints = false;
+let editScope = false, showPoints = false, rvOpen = false;
 const V = {};
 
 V.today = () => {
@@ -350,6 +514,7 @@ V.today = () => {
       <label>무엇을 썼나요</label><select id="pwItem">${itemOptions(p.itemId)}</select>
       <input id="pwTopic" placeholder="또는 직접 입력 (선택)" style="margin-top:6px">
       <label>분량 (${unit()})</label><input type="number" id="pwAmt" inputmode="decimal" step="0.5" min="0" placeholder="예: 2">
+      ${scoreInput()}
       <div class="grid2" style="margin-top:10px"><button data-act="pw-cancel" class="danger">버리기</button><button class="pri" data-act="pw-save">저장</button></div></div>`;
   }
 
@@ -362,6 +527,9 @@ V.today = () => {
     <button class="timerbtn ${S.timer ? '' : 'pri'}" data-act="timer">${S.timer ? '정지하고 기록' : KINDS[S.kind] + ' 시작'}</button>
     ${S.timer ? `<div class="small mute" style="text-align:center;margin-top:6px">${new Date(S.timer.start).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 시작 · <button class="ghost" data-act="timer-cancel">취소</button></div>` : ''}
   </div>`;
+
+  const due = reviewDue();
+  if (due && !S.pending) h += reviewCard(due);
 
   h += `<div class="card"><div class="row between"><h2>오늘</h2><span class="small mute">${isOffDay(s.today, off) ? '주말·휴일' : '평일'}</span></div>
     <div class="row between"><span class="big">${fmtMin(s.todayMin)}</span><span class="mute num">/ ${s.todayTarget ? fmtMin(s.todayTarget) : '목표 없음'}</span></div>
@@ -378,6 +546,8 @@ V.today = () => {
         <button data-go="${x.i.id}" ${S.timer ? 'disabled' : ''}>쓰기</button></div>`;
     }).join('') + `</div></div>`;
   }
+
+  h += fcCard();
 
   if (s.r) {
     const mon = mondayOf(s.today), bd = byDate();
@@ -407,9 +577,87 @@ V.today = () => {
   return h;
 };
 
+function fcCard() {
+  if (FC.stat === null && FC.err === null) return '';
+  const link = `<a class="btn" href="../flashcards/" style="margin-top:4px">암기장 열기</a>`;
+  if (!FC.stat) return `<div class="card"><h2>${kindDot('recall')}암기장</h2>
+    <div class="small mute" style="margin-bottom:8px">이 앱에서 암기장 데이터를 찾지 못했습니다. 홈 화면 앱끼리는 저장소가 분리될 수 있습니다. 암기장 공부 시간은 위 타이머에서 <b>인출</b>로 기록하세요.</div>${link}</div>`;
+  const f = FC.stat;
+  return `<div class="card"><h2>${kindDot('recall')}암기장</h2>
+    <div class="fc"><div><b>${f.due}</b><span>복습 대기</span></div><div><b>${f.done}</b><span>오늘 본 카드</span></div><div><b class="${f.weak ? 'neg' : ''}">${f.weak}</b><span>약점 카드</span></div></div>
+    <div class="small mute" style="margin-bottom:8px">암기장 시간은 타이머에서 <b>인출</b>을 골라 재면 활동 비중에 따로 잡힙니다.</div>${link}</div>`;
+}
+
+function reviewCard(mon) {
+  const w = weekSummary(mon), sun = addDays(mon, 6), total = w.total || 1;
+  const name = x => x === 'none' ? '미분류' : KINDS[x];
+  const mix = [...KIND_ORDER, 'none'].filter(x => w.k[x] > 0).map(x => `${name(x)} ${Math.round(w.k[x] / total * 100)}%`).join(' · ') || '기록 없음';
+  const sc = CRIT.map(([c, n]) => w.sc[c] === null ? null : `${n} ${r1(w.sc[c])}`).filter(Boolean).join(' · ');
+  const speed = w.rate === null ? '—' : `${r1(w.rate)}분/${unit()}` + (w.prevRate ? ` <span class="${w.rate <= w.prevRate ? 'pos' : 'neg'}">(지난주 ${r1(w.prevRate)})</span>` : '');
+  const ex = S.reviews[mon] || {};
+  return `<div class="card" style="border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)"><h2>주간 회고 · ${fmtDate(mon)} ~ ${fmtDate(sun)}</h2>
+    <div class="stat"><span>달성</span><b class="num">${fmtH(w.actual)} / ${fmtH(w.target)} · ${pct(w.actual, w.target)}%</b></div>
+    <div class="stat"><span>활동 비중</span><span class="small num" style="text-align:right">${mix}</span></div>
+    <div class="stat"><span>쓰기</span><b class="num">${w.writes}회 · 새로 써본 범위 ${w.newly}개</b></div>
+    <div class="stat"><span>작성 속도</span><b class="num">${speed}</b></div>
+    ${sc ? `<div class="stat"><span>자기평가</span><b class="num">${sc}</b></div>` : ''}
+    <label>다음 주 조정 제안</label><ul class="small" style="margin:0;padding-left:18px">${weekAdvice(w).map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+    <label>잘된 것</label><input id="rvGood" maxlength="120" value="${esc(ex.good || '')}">
+    <label>막힌 것</label><input id="rvBad" maxlength="120" value="${esc(ex.bad || '')}">
+    <button class="pri" style="width:100%;margin-top:10px" data-rv="${mon}">회고 저장</button></div>`;
+}
+
+// 자기평가 추이: 항목별 최근 10회 막대 + 최근 5회 평균, 차별화 낮은 답안 목록
+function scoreView() {
+  const ws = writeSessions.all().filter(l => l.score);
+  if (!ws.length) return `<div class="card"><h2>답안 자기평가</h2><div class="small mute">쓰기 기록을 저장할 때 구조·분량·차별화를 1~5점으로 매기면 추이가 여기에 쌓입니다.</div></div>`;
+  let h = `<div class="card"><h2>답안 자기평가 <span style="font-weight:400">· 최근 10회, 1~5점</span></h2>`;
+  CRIT.forEach(([c, name]) => {
+    const v = ws.filter(l => l.score[c]).slice(-10);
+    const last5 = v.slice(-5).map(l => l.score[c]);
+    const avg = last5.length ? r1(last5.reduce((a, b) => a + b, 0) / last5.length) : '—';
+    h += `<div class="srow"><span class="small">${name}</span><div class="spark">${v.map(l =>
+      `<i style="height:${l.score[c] * 20}%" title="${fmtDate(l.date)} ${l.score[c]}점"></i>`).join('')}</div>
+      <span class="num small" style="text-align:right"><b>${avg}</b> <span class="mute">5회 평균</span></span></div>`;
+  });
+  const low = ws.filter(l => l.score.d && l.score.d <= 2).slice(-5).reverse();
+  if (low.length) h += `<label>차별화 2점 이하 답안 — 다시 써볼 것</label><div class="list">` + low.map(l => {
+    const it = findItem(l.itemId).i;
+    return `<div class="it"><div class="grow"><div>${esc(logTopic(l) || '주제 없음')}</div><div class="small mute">${fmtDate(l.date)} · 차별화 ${l.score.d}점</div></div>
+      ${it ? `<button data-go="${it.id}" ${S.timer ? 'disabled' : ''}>쓰기</button>` : ''}</div>`;
+  }).join('') + '</div>';
+  return h + '</div>';
+}
+
+function reviewsView() {
+  const keys = Object.keys(S.reviews).sort().reverse(), cur = mondayOf(today());
+  let h = `<div class="card"><div class="row between"><h2>주간 회고</h2>
+    <button class="ghost" data-act="rv-open">${rvOpen ? '닫기' : (S.reviews[cur] ? '이번 주 회고 수정' : '이번 주 회고 쓰기')}</button></div>`;
+  if (!keys.length) h += `<div class="small mute">일요일마다 오늘 탭에 회고 카드가 뜹니다.</div>`;
+  h += `<div class="list">` + keys.slice(0, 12).map(k => {
+    const r = S.reviews[k];
+    return `<div class="it"><div class="grow"><div class="row between"><b class="small">${fmtDate(k)} 주</b><span class="small mute num">${r.pct != null ? '달성 ' + r.pct + '%' : ''}</span></div>
+      ${r.good ? `<div class="small">＋ ${esc(r.good)}</div>` : ''}${r.bad ? `<div class="small">－ ${esc(r.bad)}</div>` : ''}</div></div>`;
+  }).join('') + '</div></div>';
+  return (rvOpen ? reviewCard(cur) : '') + h;
+}
+
+// 커버리지 예측 카드
+function forecastView() {
+  const f = coverageForecast();
+  if (!f) return '';
+  const fp = Math.round(f.forecast / f.n * 100), ok = fp >= 100;
+  return `<div class="card"><h2>목표일 예측</h2>
+    <div class="row between"><span class="big ${ok ? 'pos' : 'neg'}">${fp}%</span><span class="small mute">지금 속도로 목표일까지</span></div>
+    <div class="bar"><i class="soft" style="width:${Math.min(100, fp)}%"></i><i style="width:${pct(f.written, f.n)}%"></i></div>
+    <div class="stat"><span>최근 ${f.span}일 속도</span><b class="num">주 ${r1(f.perWeek)}항목</b></div>
+    <div class="stat"><span>100%에 필요한 속도</span><b class="num ${f.need !== null && f.need > f.perWeek ? 'neg' : 'pos'}">${f.need === null ? '—' : '주 ' + r1(f.need) + '항목'}</b></div>
+    <div class="small mute" style="margin-top:6px">진한 막대는 지금 써봤음, 연한 막대는 목표일 예상치입니다.</div></div>`;
+}
+
 // 이번 주 활동 비중 — 회독이 상한을 넘으면 경고
 function mixView(k) {
-  const total = k.read + k.write + k.note + k.none;
+  const total = Object.values(k).reduce((a, b) => a + b, 0);
   if (!total) return `<div class="small mute" style="margin-top:10px">이번 주 활동 비중은 기록이 쌓이면 표시됩니다.</div>`;
   const keys = [...KIND_ORDER, 'none'].filter(x => k[x] > 0);
   const name = x => x === 'none' ? '미분류' : KINDS[x];
@@ -484,19 +732,19 @@ function speedView() {
 
 V.log = () => {
   const k = S.kind;
-  let h = `<h1>기록</h1>` + speedView() + `<div class="card"><h2>직접 추가</h2>
+  let h = `<h1>기록</h1>` + speedView() + scoreView() + `<div class="card"><h2>직접 추가</h2>
     <div class="seg">${KIND_ORDER.map(x => `<button data-kind="${x}" class="${k === x ? 'on' : ''}">${kindDot(x)}${KINDS[x]}</button>`).join('')}</div>
     <div class="grid3"><div style="grid-column:span 3"><label>날짜</label><input type="date" id="lgDate" value="${today()}"></div>
     <div><label>시간</label><input type="number" id="lgH" inputmode="numeric" min="0" placeholder="0"></div>
     <div><label>분</label><input type="number" id="lgM" inputmode="numeric" min="0" max="59" placeholder="0"></div>
     ${k === 'write' ? `<div><label>분량 (${unit()})</label><input type="number" id="lgAmt" inputmode="decimal" step="0.5" min="0" placeholder="0"></div>` : '<div></div>'}</div>
-    ${k === 'write' ? `<label>주제</label><select id="lgItem">${itemOptions('')}</select>` : ''}
+    ${k === 'write' ? `<label>주제</label><select id="lgItem">${itemOptions('')}</select>${scoreInput()}` : ''}
     <label>메모 (선택)</label><input id="lgNote" maxlength="80">
     <button class="pri" style="width:100%;margin-top:10px" data-act="log-add">추가</button></div>`;
   const days = {};
   S.logs.forEach(l => (days[l.date] = days[l.date] || []).push(l));
   const keys = Object.keys(days).sort().reverse();
-  if (!keys.length) return h + `<p class="mute">아직 기록이 없습니다.</p>`;
+  if (!keys.length) return h + `<p class="mute">아직 기록이 없습니다.</p>` + reviewsView();
   h += '<div class="card list">';
   keys.forEach((d, n) => {
     const tot = days[d].reduce((a, l) => a + l.min, 0);
@@ -507,7 +755,7 @@ V.log = () => {
         <button class="ghost danger" data-del="${l.id}">삭제</button></div>`;
     });
   });
-  return h + '</div>';
+  return h + '</div>' + reviewsView();
 };
 
 V.scope = () => {
@@ -521,9 +769,11 @@ V.scope = () => {
     <div class="bar"><i class="soft" style="width:${pct(seen, n)}%"></i><i style="width:${pct(written, n)}%"></i></div>
     <div class="legend small mute" style="margin-top:6px">${LEVELS.map((x, k) => `<span>${x} <b class="num" style="color:var(--ink)">${c[k]}</b></span>`).join('')}</div>
     ${editScope || showPoints ? '' : `<div class="small mute" style="margin-top:6px">항목을 누를 때마다 안 봄 → 봤음 → 써봤음 → 포인트. 쓰기 기록에 주제를 고르면 자동으로 써봤음이 됩니다.</div>`}</div>`;
+  if (!editScope && !showPoints) h += forecastView();
 
   if (showPoints && !editScope) {
     const pts = all.filter(x => x.i.level === 3);
+    if (pts.length) h += `<button style="width:100%;margin-bottom:12px" data-act="fc-send">${kindDot('recall')}포인트 ${pts.length}개를 암기장으로 보내기</button>`;
     if (!pts.length) return h + `<p class="mute">아직 포인트가 없습니다. 써봤음 항목을 한 번 더 누르면 한 줄 포인트를 남길 수 있습니다.</p>`;
     S.groups.forEach(g => {
       const ps = g.items.filter(i => i.level === 3); if (!ps.length) return;
@@ -600,7 +850,10 @@ function render() {
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
 }
 setInterval(() => { const el = document.getElementById('timerTxt'); if (el && S.timer) el.textContent = clock(Date.now() - S.timer.start); }, 1000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden && !document.activeElement.matches('input,textarea,select')) render(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  fcLoad().then(() => { if (!document.activeElement.matches('input,textarea,select')) render(); });
+});
 
 /* ---------- 백업 ---------- */
 async function exportData() {
@@ -629,14 +882,24 @@ document.getElementById('fileIn').addEventListener('change', async e => {
 const val = id => { const el = document.getElementById(id); return el ? el.value : ''; };
 document.getElementById('nav').addEventListener('click', e => {
   const b = e.target.closest('[data-tab]'); if (!b) return;
-  tab = b.dataset.tab; render(); scrollTo(0, 0);
+  tab = b.dataset.tab; draftScore = {}; rvOpen = false; render(); scrollTo(0, 0);
 });
 document.getElementById('app').addEventListener('click', e => {
   const el = e.target.closest('button,[data-lv],[data-toggle],[data-heat],[data-sp]'); if (!el) return;
   const d = el.dataset;
+  if (d.sc) {
+    const [c, v] = d.sc.split(':'); draftScore[c] = draftScore[c] === +v ? undefined : +v;
+    el.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === el && draftScore[c] === +v));
+    return;
+  }
   if (d.kind) { if (!S.timer) { S.kind = d.kind; save(); render(); } return; }
   if (d.add) return record(today(), +d.add, S.kind);
   if (d.go) return startTimer(d.go);
+  if (d.rv) {
+    const w = weekSummary(d.rv);
+    S.reviews[d.rv] = { good: val('rvGood').trim(), bad: val('rvBad').trim(), pct: pct(w.actual, w.target), at: Date.now() };
+    rvOpen = false; save(); toast('회고를 저장했습니다'); render(); return;
+  }
   if (d.heat) {
     const x = makeTargetFn()(d.heat), a = byDate()[d.heat] || 0;
     document.getElementById('heatTip').innerHTML = `<b>${fmtDate(d.heat)}</b> ${fmtMin(a)} / ${fmtMin(x)} <span class="mute">(${x ? Math.round(a / x * 100) : 0}%)</span>`;
@@ -658,10 +921,11 @@ document.getElementById('app').addEventListener('click', e => {
       else return;
     }
     if (i.level === 2 && !i.lastWrite) i.lastWrite = today();
+    if (i.level >= 2 && !i.wroteAt) i.wroteAt = today();
     save(); render(); return;
   }
   if (d.toggle) { if (editScope) return; const g = S.groups.find(x => x.id === d.toggle); g.open = !g.open; save(); render(); return; }
-  if (d.ireset) { const { i } = findItem(d.ireset); if (i && confirm(`'${i.name}'을(를) 안 봄으로 되돌릴까요? 포인트도 지워집니다.`)) { Object.assign(i, { level: 0, point: '', lastWrite: null }); save(); render(); } return; }
+  if (d.ireset) { const { i } = findItem(d.ireset); if (i && confirm(`'${i.name}'을(를) 안 봄으로 되돌릴까요? 포인트도 지워집니다.`)) { Object.assign(i, { level: 0, point: '', lastWrite: null, wroteAt: null }); save(); render(); } return; }
   if (d.idel) { const { g, i } = findItem(d.idel); if (g) { g.items = g.items.filter(x => x !== i); save(); render(); } return; }
   if (d.gren) { const g = S.groups.find(x => x.id === d.gren); const n = prompt('그룹 이름', g.name); if (n && n.trim()) { g.name = n.trim(); save(); render(); } return; }
   if (d.gup) { const k = S.groups.findIndex(x => x.id === d.gup); if (k > 0) { [S.groups[k - 1], S.groups[k]] = [S.groups[k], S.groups[k - 1]]; save(); render(); } return; }
@@ -675,17 +939,20 @@ document.getElementById('app').addEventListener('click', e => {
       break;
     case 'pw-save': {
       const p = S.pending; S.pending = null;
-      addLog({ date: p.date, min: p.min, kind: 'write', itemId: val('pwItem'), topic: val('pwTopic'), amount: +val('pwAmt') || 0 });
+      addLog({ date: p.date, min: p.min, kind: 'write', itemId: val('pwItem'), topic: val('pwTopic'), amount: +val('pwAmt') || 0, score: draftScore }); draftScore = {};
       break;
     }
     case 'pw-cancel':
-      if (confirm(`${fmtMin(S.pending.min)} 쓰기 기록을 버릴까요?`)) { S.pending = null; save(); render(); }
+      if (confirm(`${fmtMin(S.pending.min)} 쓰기 기록을 버릴까요?`)) { S.pending = null; draftScore = {}; save(); render(); }
       break;
     case 'log-add':
       addLog({ date: val('lgDate'), min: (+val('lgH') || 0) * 60 + (+val('lgM') || 0), kind: S.kind,
-        itemId: val('lgItem'), amount: +val('lgAmt') || 0, note: val('lgNote') });
+        itemId: val('lgItem'), amount: +val('lgAmt') || 0, note: val('lgNote'), score: S.kind === 'write' ? draftScore : null });
+      draftScore = {};
       break;
     case 'points': showPoints = !showPoints; render(); break;
+    case 'rv-open': rvOpen = !rvOpen; render(); break;
+    case 'fc-send': fcSendPoints(); break;
     case 'scope-edit': editScope = !editScope; render(); break;
     case 'bulk': {
       let cur = null, n = 0;
@@ -696,7 +963,7 @@ document.getElementById('app').addEventListener('click', e => {
           if (!cur) { cur = { id: uid(), name, open: true, items: [] }; S.groups.push(cur); }
         } else {
           if (!cur) { cur = S.groups[S.groups.length - 1]; if (!cur) { cur = { id: uid(), name: '기본', open: true, items: [] }; S.groups.push(cur); } }
-          cur.items.push({ id: uid(), name: line.replace(/^[-*•]\s*/, ''), level: 0, point: '', lastWrite: null }); n++;
+          cur.items.push({ id: uid(), name: line.replace(/^[-*•]\s*/, ''), level: 0, point: '', lastWrite: null, wroteAt: null }); n++;
         }
       });
       save(); toast(`항목 ${n}개 추가`); render();
@@ -723,6 +990,7 @@ document.getElementById('app').addEventListener('click', e => {
 });
 
 render();
+fcLoad().then(() => { if (tab === 'today' && !document.activeElement.matches('input,textarea,select')) render(); });
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
